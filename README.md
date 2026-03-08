@@ -6,7 +6,7 @@ Pi package with zellij-powered terminal integrations for [Pi](https://pi.dev).
 
 [Pi](https://pi.dev) works well in the terminal, but pane orchestration is better handled by a terminal multiplexer. `pi-zellij` adds zellij-native split workflows for Pi, plus optional desktop notifications.
 
-It includes plain split commands, generic tool launchers, settings-driven floating app shortcuts, zoxide jumps, review workflows, split-based task handoff, and automatic run notifications.
+It includes split and tab commands, generic tool launchers, settings-driven floating app shortcuts, zoxide jumps, review workflows, split-based task handoff, and automatic run notifications.
 
 ## Usage
 
@@ -31,7 +31,7 @@ If pi is already running, use:
 ## Requirements
 
 - `zellij` must be installed
-- pane and floating commands must be run from inside an active zellij session
+- pane, tab, and floating commands must be run from inside an active zellij session
 - `zoxide` is required for the zoxide commands
 - notifications use:
   - `osascript` on macOS
@@ -39,18 +39,35 @@ If pi is already running, use:
 
 ## Feature overview
 
-| Feature | Commands | What it does |
-|---|---|---|
-| Notifications | automatic via `zv-notify` | Sends desktop notifications when Pi waits, completes work, or ends in error/abort. |
-| Plain splits | `/zv`, `/zj` | Opens a new zellij pane and starts a fresh Pi session in the same project. |
-| Tool splits | `/zo <command...>`, `/zoh <command...>` | Opens a new zellij pane and runs any shell command there in the current project directory. |
-| Floating app shortcuts | configured via `pi-zellij.commands` in `settings.json` | Registers custom slash commands such as `/zh` or `/zg` that open commands in a floating zellij pane. |
-| Directory jumps | `/zz <query>`, `/zzh <query>` | Resolves a zoxide match or direct directory path, then starts Pi in a pane there. |
-| Continuation handoff | `/zcv`, `/zch` | Opens a new pane with a related handoff session in the current checkout. |
-| Continuation worktree | `/zcv -c <branch> [--from <ref>] [note]`, `/zch -c <branch> [--from <ref>] [note]` | Creates a new branch worktree, then starts Pi there with handoff context. |
-| In-place review prompts | `/review <target>`, `/review-diff [focus-or-pr-url]` | Expands bundled prompts for review in the current pane. |
-| Split review sessions | `/zrv`, `/zrh`, plus review flags | Opens a review-focused pane for the current diff, a file, a directory, or a GitHub PR URL. |
-| Review skill | `/skill:code-review` | Loads the bundled structured review skill for files, directories, diffs, and PRs. |
+### Pane and tab workflows
+
+- `/zv`, `/zj`, `/zt`
+  - start a fresh Pi session in a new right pane, lower pane, or tab
+- `/zo <command...>`, `/zoh <command...>`
+  - run any shell command in a new right pane or lower pane
+- `/zz <query>`, `/zzh <query>`
+  - jump to a zoxide match or direct directory path and start Pi there
+
+### Floating tools
+
+- `pi-zellij.commands` in `settings.json`
+  - registers floating app shortcuts such as `/zh` for `hx` or `/zg` for `lazygit`
+
+### Review and handoff workflows
+
+- `/zcv`, `/zch`
+  - open continuation sessions in a split, optionally in a new git worktree
+- `/review <target>`, `/review-diff [focus-or-pr-url]`
+  - expand bundled review prompts in the current pane
+- `/zrv`, `/zrh`, plus review flags
+  - open review-focused Pi sessions in a split
+- `/skill:code-review`
+  - loads the bundled structured review skill for files, directories, diffs, and PRs
+
+### Notifications
+
+- automatic via `zv-notify`
+  - sends desktop notifications when Pi waits, completes work, or ends in error or abort
 
 ## Bundled extensions and resources
 
@@ -69,7 +86,7 @@ Other bundled resources:
 
 ## Commands
 
-### Split commands
+### Split and tab commands
 
 - `/zv`
   - opens a new pane to the right
@@ -77,13 +94,17 @@ Other bundled resources:
 - `/zj`
   - opens a new pane below
   - starts a fresh `pi` session in the same `cwd`
+- `/zt`
+  - opens a new zellij tab
+  - starts a fresh `pi` session in the same `cwd`
 
-Both commands also accept optional initial prompt text.
+All three commands also accept optional initial prompt text.
 
-Example:
+Examples:
 
 ```text
 /zv Review the auth flow in this repo
+/zt Investigate flaky tests in this repo
 ```
 
 ### Tool split commands
@@ -94,8 +115,6 @@ Example:
 - `/zoh <command...>`
   - opens a new pane below
   - runs the given shell command in the same `cwd`
-- `/zov`
-  - alias for `/zo`
 
 Examples:
 
@@ -162,7 +181,7 @@ Then you can pass arguments through to the configured command:
 /zh src/auth.ts
 ```
 
-Configured command names cannot reuse built-in Pi commands such as `/settings`, `/model`, or `/reload`, and they also cannot replace pi-zellij's own slash commands.
+Configured command names cannot reuse built-in Pi commands such as `/settings`, `/model`, or `/reload`, and they also cannot replace pi-zellij's own slash commands such as `/zv`, `/zj`, `/zt`, `/zz`, or `/zcv`.
 
 If the same command exists in both global and project settings, the project setting wins. After changing settings, run `/reload` in Pi.
 

@@ -44,8 +44,8 @@ const RESERVED_COMMAND_NAMES = new Set([
 	"review-diff",
 	"zv",
 	"zj",
+	"zt",
 	"zo",
-	"zov",
 	"zoh",
 	"zz",
 	"zzh",
@@ -273,14 +273,6 @@ export default function zvOpenExtension(pi: ExtensionAPI) {
 		"Open a new right pane and run any shell command there",
 		"Opened a tool pane to the right",
 	);
-	registerOpenCommand(
-		pi,
-		"zov",
-		"right",
-		"Alias for /zo",
-		"Opened a tool pane to the right",
-	);
-
 	registerOpenCommand(
 		pi,
 		"zoh",

@@ -101,3 +101,36 @@ export async function openCommandInFloatingPane(
 
 	return { ok: true };
 }
+
+export async function openCommandInNewTab(
+	pi: ExtensionAPI,
+	cwd: string,
+	command: string,
+	options?: { name?: string },
+): Promise<{ ok: true } | { ok: false; error: string }> {
+	if (!isInsideZellijSession()) {
+		return { ok: false, error: "This command must be run from inside an active zellij session" };
+	}
+
+	const newTabArgs = ["action", "new-tab", "--cwd", cwd];
+	if (options?.name) {
+		newTabArgs.push("--name", options.name);
+	}
+
+	const newTabResult = await execZellij(pi, newTabArgs);
+	if (!newTabResult.ok) {
+		return { ok: false, error: newTabResult.error || "Failed to open a new zellij tab" };
+	}
+
+	const writeCommandResult = await execZellij(pi, ["action", "write-chars", command]);
+	if (!writeCommandResult.ok) {
+		return { ok: false, error: writeCommandResult.error || "Failed to write command to new zellij tab" };
+	}
+
+	const submitCommandResult = await execZellij(pi, ["action", "write", "10"]);
+	if (!submitCommandResult.ok) {
+		return { ok: false, error: submitCommandResult.error || "Failed to start command in new zellij tab" };
+	}
+
+	return { ok: true };
+}

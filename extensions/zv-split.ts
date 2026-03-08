@@ -1,5 +1,5 @@
 import type { ExtensionAPI, ExtensionCommandContext } from "@mariozechner/pi-coding-agent";
-import { buildPiCommand, openCommandInNewSplit, type SplitDirection } from "./zv-core.ts";
+import { buildPiCommand, openCommandInNewSplit, openCommandInNewTab, type SplitDirection } from "./zv-core.ts";
 
 async function openPiInSplit(
 	pi: ExtensionAPI,
@@ -12,6 +12,14 @@ async function openPiInSplit(
 		direction,
 		buildPiCommand(ctx.cwd, { prompt: args.trim().length > 0 ? args : undefined }),
 	);
+}
+
+async function openPiInTab(
+	pi: ExtensionAPI,
+	ctx: ExtensionCommandContext,
+	args: string,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+	return openCommandInNewTab(pi, ctx.cwd, buildPiCommand(ctx.cwd, { prompt: args.trim().length > 0 ? args : undefined }));
 }
 
 function registerSplitCommand(
@@ -34,6 +42,25 @@ function registerSplitCommand(
 	});
 }
 
+function registerTabCommand(
+	pi: ExtensionAPI,
+	name: string,
+	description: string,
+	successMessage: string,
+): void {
+	pi.registerCommand(name, {
+		description,
+		handler: async (args, ctx) => {
+			const result = await openPiInTab(pi, ctx, args);
+			if (result.ok) {
+				ctx.ui.notify(successMessage, "info");
+			} else {
+				ctx.ui.notify(`zellij tab failed: ${result.error}`, "error");
+			}
+		},
+	});
+}
+
 export default function zvSplitExtension(pi: ExtensionAPI) {
 	registerSplitCommand(
 		pi,
@@ -49,5 +76,12 @@ export default function zvSplitExtension(pi: ExtensionAPI) {
 		"down",
 		"Open a new lower zellij pane and start a fresh pi session",
 		"Opened a new pane below",
+	);
+
+	registerTabCommand(
+		pi,
+		"zt",
+		"Open a new zellij tab and start a fresh pi session",
+		"Opened a new tab",
 	);
 }
