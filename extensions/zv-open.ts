@@ -17,7 +17,29 @@ const DEFAULT_FLOATING_PANE_OPTIONS = {
 } as const;
 
 const GLOBAL_SETTINGS_PATH = join(homedir(), ".pi", "agent", "settings.json");
+const SETTINGS_SECTION_NAMES = ["pi-zellij", "pi-zv"] as const;
 const RESERVED_COMMAND_NAMES = new Set([
+	"login",
+	"logout",
+	"model",
+	"scoped-models",
+	"settings",
+	"resume",
+	"new",
+	"name",
+	"session",
+	"tree",
+	"fork",
+	"compact",
+	"copy",
+	"export",
+	"share",
+	"reload",
+	"hotkeys",
+	"changelog",
+	"quit",
+	"exit",
+	"help",
 	"review",
 	"review-diff",
 	"zv",
@@ -31,7 +53,6 @@ const RESERVED_COMMAND_NAMES = new Set([
 	"zrh",
 	"zcv",
 	"zch",
-	"skill:code-review",
 ]);
 
 interface ConfiguredFloatingCommandInput {
@@ -115,25 +136,29 @@ function readJsonFile(path: string): Record<string, unknown> | undefined {
 
 function readPiZellijCommands(settingsPath: string): Record<string, unknown> {
 	const settings = readJsonFile(settingsPath);
-	const section = settings?.["pi-zellij"];
-	if (!section) {
-		return {};
-	}
-	if (typeof section !== "object" || Array.isArray(section)) {
-		console.warn(`[pi-zellij] Ignoring invalid \"pi-zellij\" settings in ${settingsPath}`);
-		return {};
+	for (const sectionName of SETTINGS_SECTION_NAMES) {
+		const section = settings?.[sectionName];
+		if (!section) {
+			continue;
+		}
+		if (typeof section !== "object" || Array.isArray(section)) {
+			console.warn(`[pi-zellij] Ignoring invalid \"${sectionName}\" settings in ${settingsPath}`);
+			continue;
+		}
+
+		const commands = (section as { commands?: unknown }).commands;
+		if (commands === undefined) {
+			continue;
+		}
+		if (typeof commands !== "object" || Array.isArray(commands)) {
+			console.warn(`[pi-zellij] Ignoring invalid \"${sectionName}.commands\" settings in ${settingsPath}`);
+			continue;
+		}
+
+		return commands as Record<string, unknown>;
 	}
 
-	const commands = (section as { commands?: unknown }).commands;
-	if (!commands) {
-		return {};
-	}
-	if (typeof commands !== "object" || Array.isArray(commands)) {
-		console.warn(`[pi-zellij] Ignoring invalid \"pi-zellij.commands\" settings in ${settingsPath}`);
-		return {};
-	}
-
-	return commands as Record<string, unknown>;
+	return {};
 }
 
 function isValidCommandName(value: string): boolean {

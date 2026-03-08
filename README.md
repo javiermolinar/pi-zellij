@@ -116,6 +116,8 @@ Supported locations:
 - `~/.pi/agent/settings.json` for global commands
 - `.pi/settings.json` for project-local commands
 
+During the rename from `pi-zv` to `pi-zellij`, legacy `pi-zv.commands` is still accepted for compatibility. If both keys exist, `pi-zellij.commands` wins.
+
 Simple form:
 
 ```json
@@ -159,6 +161,8 @@ Then you can pass arguments through to the configured command:
 ```text
 /zh src/auth.ts
 ```
+
+Configured command names cannot reuse built-in Pi commands such as `/settings`, `/model`, or `/reload`, and they also cannot replace pi-zellij's own slash commands.
 
 If the same command exists in both global and project settings, the project setting wins. After changing settings, run `/reload` in Pi.
 
