@@ -5,9 +5,11 @@
 This repository contains `pi-zellij`, a small Pi package that adds zellij-powered terminal workflows to Pi.
 
 Current extensions:
-- `extensions/zv-notify.ts` — sends desktop notifications when Pi finishes, waits for input, or ends in an error/abort state
-- `extensions/zv-split.ts` — adds split commands that open a new zellij pane and start a fresh Pi session in the same working directory
+- `extensions/zv-split.ts` — adds split and tab commands that open a new zellij pane or tab and start a fresh Pi session in the same working directory
+- `extensions/zv-open.ts` — adds generic shell split commands plus configurable floating app shortcuts from settings
 - `extensions/zv-zoxide.ts` — adds zoxide-based pane commands that jump to a matched directory and start Pi there
+- `extensions/zv-review.ts` — adds split review commands for diffs, files, directories, and GitHub pull requests
+- `extensions/zv-continue.ts` — adds split-based continuation and worktree handoff commands
 
 Other important files:
 - `README.md` — user-facing package documentation

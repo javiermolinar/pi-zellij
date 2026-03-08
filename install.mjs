@@ -21,7 +21,7 @@ const isRemove = args.includes("--remove") || args.includes("-r");
 const isHelp = args.includes("--help") || args.includes("-h");
 
 function printHelp() {
-	console.log(`\n${PACKAGE_NAME}\n\nWhy:\n  ${PACKAGE_NAME} adds zellij-powered pane workflows and system notifications to pi.\n\nUsage:\n  npx ${PACKAGE_NAME}          Install or update the package\n  npx ${PACKAGE_NAME} --remove Remove the installed package\n  npx ${PACKAGE_NAME} --help   Show this help\n`);
+	console.log(`\n${PACKAGE_NAME}\n\nWhy:\n  ${PACKAGE_NAME} adds zellij-powered pane workflows to pi.\n\nUsage:\n  npx ${PACKAGE_NAME}          Install or update the package\n  npx ${PACKAGE_NAME} --remove Remove the installed package\n  npx ${PACKAGE_NAME} --help   Show this help\n`);
 }
 
 function ensureDir(dir) {

@@ -4,9 +4,9 @@ Pi package with zellij-powered terminal integrations for [Pi](https://pi.dev).
 
 ## Why
 
-[Pi](https://pi.dev) works well in the terminal, but pane orchestration is better handled by a terminal multiplexer. `pi-zellij` adds zellij-native split workflows for Pi, plus optional desktop notifications.
+[Pi](https://pi.dev) works well in the terminal, but pane orchestration is better handled by a terminal multiplexer. `pi-zellij` adds zellij-native split workflows for Pi.
 
-It includes split and tab commands, generic tool launchers, settings-driven floating app shortcuts, zoxide jumps, review workflows, split-based task handoff, and automatic run notifications.
+It includes split and tab commands, generic tool launchers, settings-driven floating app shortcuts, zoxide jumps, review workflows, and split-based task handoff.
 
 ## Usage
 
@@ -33,9 +33,6 @@ If pi is already running, use:
 - `zellij` must be installed
 - pane, tab, and floating commands must be run from inside an active zellij session
 - `zoxide` is required for the zoxide commands
-- notifications use:
-  - `osascript` on macOS
-  - `notify-send` on Linux
 
 ## Feature overview
 
@@ -64,15 +61,9 @@ If pi is already running, use:
 - `/skill:code-review`
   - loads the bundled structured review skill for files, directories, diffs, and PRs
 
-### Notifications
-
-- automatic via `zv-notify`
-  - sends desktop notifications for Pi run states such as `Waiting`, `Task Complete`, and `Error`
-
 ## Bundled extensions and resources
 
 Extensions:
-- `zv-notify`
 - `zv-split`
 - `zv-open`
 - `zv-zoxide`
@@ -281,24 +272,3 @@ Examples:
 
 If the target is a GitHub pull request URL, the review workflow switches to PR review and instructs pi to inspect the pull request with `gh pr view` and `gh pr diff`.
 
-## Notifications
-
-The bundled `zv-notify` extension summarizes each run and sends a desktop notification when supported by the host system.
-
-Current notification types:
-- `Waiting`
-- `Task Complete`
-- `Error`
-
-You can control notification noise with one setting:
-- `PI_ZV_NOTIFY_LEVEL=all` - `Waiting`, `Task Complete`, and `Error`
-- `PI_ZV_NOTIFY_LEVEL=medium` - `Task Complete` and `Error`
-- `PI_ZV_NOTIFY_LEVEL=low` - `Error` only
-- `PI_ZV_NOTIFY_LEVEL=disabled` - disable notifications
-
-## Environment variables
-
-- `PI_ZV_NOTIFY_LEVEL` - notification level: `all`, `medium`, `low`, or `disabled` (default: `all`)
-- `PI_ZV_NOTIFY_THRESHOLD_MS` - duration threshold before a run is labeled `Task Complete` instead of `Waiting` (default: `15000`)
-- `PI_ZV_NOTIFY_DEBOUNCE_MS` - minimum delay between duplicate notifications (default: `3000`)
-- `PI_ZV_NOTIFY_TITLE` - notification title override (default: `Pi`)

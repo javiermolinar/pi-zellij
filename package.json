@@ -1,6 +1,6 @@
 {
   "name": "pi-zellij",
-  "version": "0.3.1",
+  "version": "0.4.0",
   "description": "Pi package with zellij-powered terminal integrations",
   "author": "Javi Molina",
   "license": "MIT",
@@ -10,8 +10,7 @@
     "pi",
     "pi-coding-agent",
     "zellij",
-    "terminal",
-    "notifications"
+    "terminal"
   ],
   "homepage": "https://github.com/javiermolinar/pi-zellij#readme",
   "repository": {
