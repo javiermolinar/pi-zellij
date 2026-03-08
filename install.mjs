@@ -1,0 +1,149 @@
+#!/usr/bin/env node
+
+import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+
+const PACKAGE_NAME = "pi-zellij";
+const LEGACY_PACKAGE_NAMES = ["pi-zv"];
+const LEGACY_SETTINGS_KEYS = ["pi-zv"];
+const AGENT_DIR = path.join(os.homedir(), ".pi", "agent");
+const SETTINGS_PATH = path.join(AGENT_DIR, "settings.json");
+const PACKAGE_DIR = path.join(AGENT_DIR, "packages", PACKAGE_NAME);
+const PACKAGE_SETTINGS_ENTRY = `./packages/${PACKAGE_NAME}`;
+const SOURCE_DIR = path.dirname(fileURLToPath(import.meta.url));
+const FILES_TO_COPY = ["package.json", "README.md", "CHANGELOG.md"];
+const DIRECTORIES_TO_COPY = ["extensions", "skills", "prompts"];
+
+const args = process.argv.slice(2);
+const isRemove = args.includes("--remove") || args.includes("-r");
+const isHelp = args.includes("--help") || args.includes("-h");
+
+function printHelp() {
+	console.log(`\n${PACKAGE_NAME}\n\nWhy:\n  ${PACKAGE_NAME} adds zellij-powered pane workflows and system notifications to pi.\n\nUsage:\n  npx ${PACKAGE_NAME}          Install or update the package\n  npx ${PACKAGE_NAME} --remove Remove the installed package\n  npx ${PACKAGE_NAME} --help   Show this help\n`);
+}
+
+function ensureDir(dir) {
+	fs.mkdirSync(dir, { recursive: true });
+}
+
+function getLegacyPackageDirs() {
+	return LEGACY_PACKAGE_NAMES.map((name) => path.join(AGENT_DIR, "packages", name));
+}
+
+function getLegacyExtensionDirs() {
+	return LEGACY_PACKAGE_NAMES.map((name) => path.join(AGENT_DIR, "extensions", name));
+}
+
+function getLegacyPackageEntries() {
+	return LEGACY_PACKAGE_NAMES.flatMap((name) => [`./packages/${name}`, `./extensions/${name}`]);
+}
+
+function readSettings() {
+	if (!fs.existsSync(SETTINGS_PATH)) {
+		return {};
+	}
+	return JSON.parse(fs.readFileSync(SETTINGS_PATH, "utf8"));
+}
+
+function writeSettings(settings) {
+	ensureDir(path.dirname(SETTINGS_PATH));
+	fs.writeFileSync(SETTINGS_PATH, `${JSON.stringify(settings, null, 2)}\n`);
+}
+
+function migrateLegacySettings(settings) {
+	if (settings[PACKAGE_NAME] !== undefined) {
+		for (const key of LEGACY_SETTINGS_KEYS) {
+			delete settings[key];
+		}
+		return settings;
+	}
+
+	for (const key of LEGACY_SETTINGS_KEYS) {
+		if (settings[key] !== undefined) {
+			settings[PACKAGE_NAME] = settings[key];
+			delete settings[key];
+			break;
+		}
+	}
+
+	return settings;
+}
+
+function ensurePackageSettingsEntry() {
+	const settings = migrateLegacySettings(readSettings());
+	const packages = Array.isArray(settings.packages) ? [...settings.packages] : [];
+	const filteredPackages = packages.filter(
+		(entry) => entry !== PACKAGE_SETTINGS_ENTRY && !getLegacyPackageEntries().includes(entry),
+	);
+	filteredPackages.push(PACKAGE_SETTINGS_ENTRY);
+	settings.packages = filteredPackages;
+	writeSettings(settings);
+}
+
+function removePackageSettingsEntry() {
+	if (!fs.existsSync(SETTINGS_PATH)) {
+		return;
+	}
+	const settings = migrateLegacySettings(readSettings());
+	if (!Array.isArray(settings.packages)) {
+		return;
+	}
+	settings.packages = settings.packages.filter(
+		(entry) => entry !== PACKAGE_SETTINGS_ENTRY && !getLegacyPackageEntries().includes(entry),
+	);
+	writeSettings(settings);
+}
+
+function removeLegacyInstall() {
+	for (const dir of getLegacyExtensionDirs()) {
+		if (fs.existsSync(dir)) {
+			fs.rmSync(dir, { recursive: true, force: true });
+		}
+	}
+	for (const dir of getLegacyPackageDirs()) {
+		if (fs.existsSync(dir)) {
+			fs.rmSync(dir, { recursive: true, force: true });
+		}
+	}
+}
+
+function copyInstall() {
+	removeLegacyInstall();
+	fs.rmSync(PACKAGE_DIR, { recursive: true, force: true });
+	ensureDir(PACKAGE_DIR);
+	for (const file of FILES_TO_COPY) {
+		fs.copyFileSync(path.join(SOURCE_DIR, file), path.join(PACKAGE_DIR, file));
+	}
+	for (const dir of DIRECTORIES_TO_COPY) {
+		fs.cpSync(path.join(SOURCE_DIR, dir), path.join(PACKAGE_DIR, dir), { recursive: true });
+	}
+	ensurePackageSettingsEntry();
+}
+
+if (isHelp) {
+	printHelp();
+	process.exit(0);
+}
+
+if (isRemove) {
+	const hadPackageDir = fs.existsSync(PACKAGE_DIR) || getLegacyPackageDirs().some((dir) => fs.existsSync(dir));
+	const hadLegacyDir = getLegacyExtensionDirs().some((dir) => fs.existsSync(dir));
+	if (fs.existsSync(PACKAGE_DIR)) {
+		fs.rmSync(PACKAGE_DIR, { recursive: true, force: true });
+	}
+	removeLegacyInstall();
+	removePackageSettingsEntry();
+	if (hadPackageDir || hadLegacyDir) {
+		console.log(`Removed ${PACKAGE_NAME} from ${AGENT_DIR}`);
+	} else {
+		console.log("Package is not installed");
+	}
+	process.exit(0);
+}
+
+copyInstall();
+console.log(`Installed to ${PACKAGE_DIR}`);
+console.log(`Added ${PACKAGE_SETTINGS_ENTRY} to ${SETTINGS_PATH}`);
+console.log("Run /reload in pi if it is already running.");

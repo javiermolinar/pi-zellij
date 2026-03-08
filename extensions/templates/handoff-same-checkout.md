@@ -1,0 +1,1 @@
+Continue the current task from this new pane.{{FOCUS_NOTE_SENTENCE}} Use the inherited session history and the handoff summary already present in this session. Start with the highest-priority next step.

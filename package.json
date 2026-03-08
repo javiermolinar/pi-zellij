@@ -1,0 +1,55 @@
+{
+  "name": "pi-zellij",
+  "version": "0.2.0",
+  "description": "Pi package with zellij-powered terminal integrations",
+  "author": "Javi Molina",
+  "license": "MIT",
+  "type": "module",
+  "keywords": [
+    "pi-package",
+    "pi",
+    "pi-coding-agent",
+    "zellij",
+    "terminal",
+    "notifications"
+  ],
+  "homepage": "https://github.com/javiermolinar/pi-zellij#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/javiermolinar/pi-zellij.git"
+  },
+  "bugs": {
+    "url": "https://github.com/javiermolinar/pi-zellij/issues"
+  },
+  "bin": {
+    "pi-zellij": "install.mjs"
+  },
+  "files": [
+    "extensions/",
+    "skills/",
+    "prompts/",
+    "install.mjs",
+    "README.md",
+    "CHANGELOG.md"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "pi": {
+    "extensions": [
+      "./extensions/index.ts"
+    ],
+    "skills": [
+      "./skills"
+    ],
+    "prompts": [
+      "./prompts"
+    ]
+  },
+  "peerDependencies": {
+    "@mariozechner/pi-coding-agent": "*"
+  },
+  "devDependencies": {
+    "@mariozechner/pi-coding-agent": "*"
+  }
+}
