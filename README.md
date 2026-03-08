@@ -159,7 +159,9 @@ Examples:
 /zg
 ```
 
-For commands that should accept extra arguments, use the object form:
+For commands that should accept extra arguments, use the object form.
+
+Helix and lazygit example:
 
 ```json
 {
@@ -169,16 +171,22 @@ For commands that should accept extra arguments, use the object form:
         "run": "hx",
         "acceptArgs": true,
         "description": "Open Helix in a floating pane"
+      },
+      "zg": {
+        "run": "lazygit",
+        "description": "Open lazygit in a floating pane"
       }
     }
   }
 }
 ```
 
-Then you can pass arguments through to the configured command:
+Then you can use:
 
 ```text
+/zh
 /zh src/auth.ts
+/zg
 ```
 
 Configured command names cannot reuse built-in Pi commands such as `/settings`, `/model`, or `/reload`, and they also cannot replace pi-zellij's own slash commands such as `/zv`, `/zj`, `/zt`, `/zz`, or `/zcv`.
