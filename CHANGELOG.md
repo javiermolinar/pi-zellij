@@ -5,6 +5,10 @@
 ### Added
 
 - Initial `pi-zellij` release with zellij-powered pane workflows for Pi.
+
+### Changed
+
+- Clarified README notification wording to match the current `zv-notify` behavior: `Waiting`, `Task Complete`, and `Error`.
 - Added `zv-notify` for desktop notifications using `osascript` on macOS or `notify-send` on Linux.
 - Added `/zv`, `/zj`, and `/zt` to open a new zellij pane or tab and start a fresh Pi session in the same working directory.
 - Added `/zo` and `/zoh` to open a new pane and run any shell command there.

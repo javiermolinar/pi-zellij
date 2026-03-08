@@ -67,7 +67,7 @@ If pi is already running, use:
 ### Notifications
 
 - automatic via `zv-notify`
-  - sends desktop notifications when Pi waits, completes work, or ends in error or abort
+  - sends desktop notifications for Pi run states such as `Waiting`, `Task Complete`, and `Error`
 
 ## Bundled extensions and resources
 
