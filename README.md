@@ -4,7 +4,7 @@ Pi package with [zellij](https://zellij.dev)-powered terminal integrations for [
 
 ## Workflow
 
-![pi-zellij workflow](assets/worflow.gif)
+![pi-zellij workflow](assets/workflow.gif)
 
 ## Why
 
