@@ -1,6 +1,6 @@
 # pi-zellij
 
-Pi package with [zellij](https://zellij.dev)-powered terminal integrations for [Pi](https://pi.dev).
+Pi package with [zellij](https://zellij.dev)-powered terminal integrations for [Pi](https://pi.dev). Make your workflow agent driven.
 
 ## Workflow
 
