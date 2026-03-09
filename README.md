@@ -1,6 +1,10 @@
 # pi-zellij
 
-Pi package with zellij-powered terminal integrations for [Pi](https://pi.dev).
+Pi package with [zellij](https://zellij.dev)-powered terminal integrations for [Pi](https://pi.dev).
+
+## Workflow
+
+![pi-zellij workflow](assets/worflow.gif)
 
 ## Why
 
