@@ -241,9 +241,9 @@ Supported keys:
 - `doneBg`, `doneFg`
   - pane colors to apply after `agent_end`
 - `workingBg`, `workingFg`
-  - optional pane colors to apply while Pi is working; if omitted, `pi-zellij` resets the pane to its default colors on `agent_start`
+  - optional pane colors to apply while Pi is working; if omitted, `pi-zellij` resets the pane to its default colors when the next input is submitted
 
-When enabled, `pi-zellij` resets the pane color on session start, session switch, and session shutdown so completed-turn highlights do not linger across sessions. After changing these settings, run `/reload` in Pi.
+When enabled, `pi-zellij` resets the pane color on session start, session switch, the next submitted input, and session shutdown so completed-turn highlights do not linger across sessions. After changing these settings, run `/reload` in Pi.
 
 ### Zoxide jump commands
 

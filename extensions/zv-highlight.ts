@@ -213,6 +213,11 @@ export default function zvHighlightExtension(pi: ExtensionAPI) {
 		await refreshConfig(ctx.cwd);
 	});
 
+	pi.on("input", async () => {
+		await resetPaneIfEnabled();
+		return { action: "continue" };
+	});
+
 	pi.on("agent_start", async () => {
 		await applyWorkingState();
 	});
