@@ -10,7 +10,7 @@ Pi package with [zellij](https://zellij.dev)-powered terminal integrations for [
 
 [Pi](https://pi.dev) works well in the terminal, but pane orchestration is better handled by a terminal multiplexer. `pi-zellij` adds zellij-native split workflows for Pi.
 
-It includes split and tab commands, generic tool launchers, settings-driven floating app shortcuts, zoxide jumps, review workflows, and split-based task handoff.
+It includes split and tab commands, generic tool launchers, settings-driven floating app shortcuts, opt-in pane highlighting for completed agent turns, zoxide jumps, review workflows, and split-based task handoff.
 
 ## Usage
 
@@ -60,6 +60,8 @@ If pi is already running, use:
 
 - `pi-zellij.commands` in `settings.json`
   - registers floating app shortcuts such as `/zh` for `hx` or `/zg` for `lazygit`
+- `pi-zellij.paneHighlight` in `settings.json`
+  - optionally tints the current zellij pane when Pi finishes a turn and is waiting for input
 
 ### Review and handoff workflows
 
@@ -77,6 +79,7 @@ If pi is already running, use:
 Extensions:
 - `zv-split`
 - `zv-open`
+- `zv-highlight`
 - `zv-zoxide`
 - `zv-review`
 - `zv-continue`
@@ -194,6 +197,53 @@ Then you can use:
 Configured command names cannot reuse built-in Pi commands such as `/settings`, `/model`, or `/reload`, and they also cannot replace pi-zellij's own slash commands such as `/zv`, `/zj`, `/zt`, `/zz`, or `/zcv`.
 
 If the same command exists in both global and project settings, the project setting wins. After changing settings, run `/reload` in Pi.
+
+### Pane highlight on completion
+
+You can optionally tint the current zellij pane when Pi finishes a turn and is waiting for input.
+
+Supported locations:
+- `~/.pi/agent/settings.json` for global settings
+- `.pi/settings.json` for project-local settings
+
+During the rename from `pi-zv` to `pi-zellij`, legacy `pi-zv.paneHighlight` is still accepted for compatibility. If both keys exist, `pi-zellij.paneHighlight` wins.
+
+Minimal form:
+
+```json
+{
+  "pi-zellij": {
+    "paneHighlight": true
+  }
+}
+```
+
+That enables a default done-state background tint. The feature is zellij-only and does nothing outside an active zellij session.
+
+Object form:
+
+```json
+{
+  "pi-zellij": {
+    "paneHighlight": {
+      "enabled": true,
+      "doneBg": "#17352a",
+      "doneFg": "#e7fff0",
+      "workingBg": "#2f2415"
+    }
+  }
+}
+```
+
+Supported keys:
+- `enabled`
+  - set to `false` to disable the feature
+- `doneBg`, `doneFg`
+  - pane colors to apply after `agent_end`
+- `workingBg`, `workingFg`
+  - optional pane colors to apply while Pi is working; if omitted, `pi-zellij` resets the pane to its default colors on `agent_start`
+
+When enabled, `pi-zellij` resets the pane color on session start, session switch, and session shutdown so completed-turn highlights do not linger across sessions. After changing these settings, run `/reload` in Pi.
 
 ### Zoxide jump commands
 

@@ -13,7 +13,7 @@ interface ZellijExecResult {
 	error?: string;
 }
 
-function isInsideZellijSession(): boolean {
+export function isInsideZellijSession(): boolean {
 	return Boolean(process.env.ZELLIJ || process.env.ZELLIJ_SESSION_NAME || process.env.ZELLIJ_PANE_ID);
 }
 
@@ -99,6 +99,51 @@ async function execZellij(pi: ExtensionAPI, args: string[]): Promise<ZellijExecR
 		stdout: result.stdout,
 		stderr: result.stderr,
 	};
+}
+
+function getCurrentPaneTargetArgs(): string[] {
+	return process.env.ZELLIJ_PANE_ID ? ["-p", process.env.ZELLIJ_PANE_ID] : [];
+}
+
+export async function resetCurrentPaneColor(pi: ExtensionAPI): Promise<{ ok: true } | { ok: false; error: string }> {
+	if (!isInsideZellijSession()) {
+		return { ok: false, error: "This command must be run from inside an active zellij session" };
+	}
+
+	const result = await execZellij(pi, ["action", "set-pane-color", ...getCurrentPaneTargetArgs(), "--reset"]);
+	if (!result.ok) {
+		return { ok: false, error: result.error || "Failed to reset zellij pane color" };
+	}
+
+	return { ok: true };
+}
+
+export async function setCurrentPaneColor(
+	pi: ExtensionAPI,
+	options: { bg?: string; fg?: string },
+): Promise<{ ok: true } | { ok: false; error: string }> {
+	if (!isInsideZellijSession()) {
+		return { ok: false, error: "This command must be run from inside an active zellij session" };
+	}
+
+	const paneTargetArgs = getCurrentPaneTargetArgs();
+	const args = ["action", "set-pane-color", ...paneTargetArgs];
+	if (options.bg) {
+		args.push("--bg", options.bg);
+	}
+	if (options.fg) {
+		args.push("--fg", options.fg);
+	}
+	if (args.length === 2 + paneTargetArgs.length) {
+		return resetCurrentPaneColor(pi);
+	}
+
+	const result = await execZellij(pi, args);
+	if (!result.ok) {
+		return { ok: false, error: result.error || "Failed to set zellij pane color" };
+	}
+
+	return { ok: true };
 }
 
 function buildNewTabArgs(cwd: string, options?: { name?: string }): string[] {

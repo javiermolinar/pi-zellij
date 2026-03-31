@@ -4,6 +4,7 @@ import zvZoxideExtension from "./zv-zoxide.ts";
 import zvReviewExtension from "./zv-review.ts";
 import zvContinueExtension from "./zv-continue.ts";
 import zvOpenExtension from "./zv-open.ts";
+import zvHighlightExtension from "./zv-highlight.ts";
 
 export default function piZellijExtensionBundle(pi: ExtensionAPI) {
 	zvSplitExtension(pi);
@@ -11,4 +12,5 @@ export default function piZellijExtensionBundle(pi: ExtensionAPI) {
 	zvReviewExtension(pi);
 	zvContinueExtension(pi);
 	zvOpenExtension(pi);
+	zvHighlightExtension(pi);
 }
