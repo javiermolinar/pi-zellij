@@ -4,7 +4,9 @@ import { fileURLToPath } from "node:url";
 import { SessionManager, type ExtensionAPI, type ExtensionCommandContext } from "@mariozechner/pi-coding-agent";
 import {
 	buildPiCommand,
+	formatPaneSuccessMessage,
 	openCommandInNewSplit,
+	type PaneOpenResult,
 	type SplitDirection,
 } from "./zv-core.ts";
 import {
@@ -388,7 +390,7 @@ async function openContinueSplit(
 	ctx: ExtensionCommandContext,
 	direction: SplitDirection,
 	request: ContinueRequest,
-): Promise<{ ok: true } | { ok: false; error: string }> {
+): Promise<PaneOpenResult> {
 	const handoffTarget = await resolveHandoffTarget(pi, ctx, request);
 	if (!handoffTarget.ok) {
 		return handoffTarget;
@@ -422,7 +424,7 @@ function registerContinueCommand(
 
 			const result = await openContinueSplit(pi, ctx, direction, parsed.request);
 			if (result.ok) {
-				ctx.ui.notify(successMessage, "info");
+				ctx.ui.notify(formatPaneSuccessMessage(successMessage, result.paneId), "info");
 			} else {
 				ctx.ui.notify(`continuation split failed: ${result.error}`, "error");
 			}

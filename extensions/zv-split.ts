@@ -1,12 +1,21 @@
 import type { ExtensionAPI, ExtensionCommandContext } from "@mariozechner/pi-coding-agent";
-import { buildPiCommand, openCommandInNewSplit, openCommandInNewTab, type SplitDirection } from "./zv-core.ts";
+import {
+	buildPiCommand,
+	formatPaneSuccessMessage,
+	formatTabSuccessMessage,
+	openCommandInNewSplit,
+	openCommandInNewTab,
+	type PaneOpenResult,
+	type SplitDirection,
+	type TabOpenResult,
+} from "./zv-core.ts";
 
 async function openPiInSplit(
 	pi: ExtensionAPI,
 	ctx: ExtensionCommandContext,
 	direction: SplitDirection,
 	args: string,
-): Promise<{ ok: true } | { ok: false; error: string }> {
+): Promise<PaneOpenResult> {
 	return openCommandInNewSplit(
 		pi,
 		direction,
@@ -18,7 +27,7 @@ async function openPiInTab(
 	pi: ExtensionAPI,
 	ctx: ExtensionCommandContext,
 	args: string,
-): Promise<{ ok: true } | { ok: false; error: string }> {
+): Promise<TabOpenResult> {
 	return openCommandInNewTab(pi, ctx.cwd, buildPiCommand(ctx.cwd, { prompt: args.trim().length > 0 ? args : undefined }));
 }
 
@@ -34,7 +43,7 @@ function registerSplitCommand(
 		handler: async (args, ctx) => {
 			const result = await openPiInSplit(pi, ctx, direction, args);
 			if (result.ok) {
-				ctx.ui.notify(successMessage, "info");
+				ctx.ui.notify(formatPaneSuccessMessage(successMessage, result.paneId), "info");
 			} else {
 				ctx.ui.notify(`zellij split failed: ${result.error}`, "error");
 			}
@@ -53,7 +62,7 @@ function registerTabCommand(
 		handler: async (args, ctx) => {
 			const result = await openPiInTab(pi, ctx, args);
 			if (result.ok) {
-				ctx.ui.notify(successMessage, "info");
+				ctx.ui.notify(formatTabSuccessMessage(successMessage, result.tabId), "info");
 			} else {
 				ctx.ui.notify(`zellij tab failed: ${result.error}`, "error");
 			}

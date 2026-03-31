@@ -1,5 +1,11 @@
 import type { ExtensionAPI, ExtensionCommandContext } from "@mariozechner/pi-coding-agent";
-import { buildPiCommand, openCommandInNewSplit, type SplitDirection } from "./zv-core.ts";
+import {
+	buildPiCommand,
+	formatPaneSuccessMessage,
+	openCommandInNewSplit,
+	type PaneOpenResult,
+	type SplitDirection,
+} from "./zv-core.ts";
 
 type ReviewMode = "general" | "bugs" | "refactor" | "tests" | "diff";
 
@@ -89,7 +95,7 @@ async function openReviewSplit(
 	ctx: ExtensionCommandContext,
 	direction: SplitDirection,
 	request: ReviewRequest,
-): Promise<{ ok: true } | { ok: false; error: string }> {
+): Promise<PaneOpenResult> {
 	return openCommandInNewSplit(pi, direction, buildPiCommand(ctx.cwd, { prompt: buildReviewPrompt(request) }));
 }
 
@@ -111,7 +117,7 @@ function registerReviewCommand(
 
 			const result = await openReviewSplit(pi, ctx, direction, parsed.request);
 			if (result.ok) {
-				ctx.ui.notify(successMessage, "info");
+				ctx.ui.notify(formatPaneSuccessMessage(successMessage, result.paneId), "info");
 			} else {
 				ctx.ui.notify(`review pane failed: ${result.error}`, "error");
 			}

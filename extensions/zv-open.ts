@@ -4,8 +4,10 @@ import { homedir } from "node:os";
 import { join } from "node:path";
 import {
 	buildShellCommand,
+	formatPaneSuccessMessage,
 	openCommandInFloatingPane as openCommandInFloatingZellijPane,
 	openCommandInNewSplit,
+	type PaneOpenResult,
 	type SplitDirection,
 } from "./zv-core.ts";
 
@@ -73,7 +75,7 @@ async function openToolInSplit(
 	ctx: ExtensionCommandContext,
 	direction: SplitDirection,
 	args: string,
-): Promise<{ ok: true } | { ok: false; error: string }> {
+): Promise<PaneOpenResult> {
 	return openCommandInNewSplit(pi, direction, buildShellCommand(ctx.cwd, args.trim()));
 }
 
@@ -82,7 +84,7 @@ async function openToolInFloatingPane(
 	ctx: ExtensionCommandContext,
 	command: string,
 	name?: string,
-): Promise<{ ok: true } | { ok: false; error: string }> {
+): Promise<PaneOpenResult> {
 	return openCommandInFloatingZellijPane(pi, buildShellCommand(ctx.cwd, command.trim()), {
 		name,
 		...DEFAULT_FLOATING_PANE_OPTIONS,
@@ -107,7 +109,7 @@ function registerOpenCommand(
 
 			const result = await openToolInSplit(pi, ctx, direction, command);
 			if (result.ok) {
-				ctx.ui.notify(successMessage, "info");
+				ctx.ui.notify(formatPaneSuccessMessage(successMessage, result.paneId), "info");
 			} else {
 				ctx.ui.notify(`tool split failed: ${result.error}`, "error");
 			}
@@ -257,7 +259,7 @@ function registerConfiguredFloatingCommand(
 			const command = trimmedArgs.length > 0 ? `${config.run} ${trimmedArgs}` : config.run;
 			const result = await openToolInFloatingPane(pi, ctx, command, commandName);
 			if (result.ok) {
-				ctx.ui.notify(`Opened /${commandName} in a floating pane`, "info");
+				ctx.ui.notify(formatPaneSuccessMessage(`Opened /${commandName} in a floating pane`, result.paneId), "info");
 			} else {
 				ctx.ui.notify(`floating pane failed: ${result.error}`, "error");
 			}

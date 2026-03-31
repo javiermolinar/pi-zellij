@@ -3,7 +3,13 @@ import { execFileSync } from "node:child_process";
 import { existsSync, statSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { buildPiCommand, openCommandInNewSplit, type SplitDirection } from "./zv-core.ts";
+import {
+	buildPiCommand,
+	formatPaneSuccessMessage,
+	openCommandInNewSplit,
+	type PaneOpenResult,
+	type SplitDirection,
+} from "./zv-core.ts";
 
 const ZOXIDE_TIMEOUT_MS = 5000;
 const MAX_COMPLETIONS = 10;
@@ -90,7 +96,7 @@ async function openPiInZoxideSplit(
 	query: string,
 	direction: SplitDirection,
 	commandName: string,
-): Promise<{ ok: true } | { ok: false; error: string }> {
+): Promise<PaneOpenResult> {
 	const targetResult = await resolveZoxideTarget(pi, query, ctx.cwd, commandName);
 	if (!targetResult.ok) {
 		return targetResult;
@@ -121,7 +127,7 @@ function registerZoxideCommand(
 
 			const result = await openPiInZoxideSplit(pi, ctx, query, direction, name);
 			if (result.ok) {
-				ctx.ui.notify(successMessage, "info");
+				ctx.ui.notify(formatPaneSuccessMessage(successMessage, result.paneId), "info");
 			} else {
 				ctx.ui.notify(`zoxide failed: ${result.error}`, "error");
 			}

@@ -14,6 +14,11 @@
 - Added `zv-review` with `/zrv` and `/zrh`, plus bundled `code-review` skill and `/review` / `/review-diff` prompt templates for focused review workflows, including GitHub pull request review via `gh` when given a PR URL.
 - Added `zv-continue` with `/zcv` and `/zch` for split-based task handoff in the current checkout or by creating a git worktree branch with `-c <branch>`.
 
+### Changed
+
+- When zellij reports created pane or tab IDs, `pi-zellij` now shows them in success notifications for split, floating, zoxide, review, continuation, and tab commands.
+- `/zt` now uses `zellij action new-tab -- <command>` when available instead of always simulating typed input, while keeping the previous typed-input path as a compatibility fallback.
+
 ### Removed
 
 - Removed the bundled `zv-notify` extension so `pi-zellij` does not conflict with separate notification packages or user-specific notification setups.

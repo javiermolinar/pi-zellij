@@ -38,6 +38,13 @@ If pi is already running, use:
 - pane, tab, and floating commands must be run from inside an active zellij session
 - `zoxide` is required for the zoxide commands
 
+### Recommended zellij version
+
+| zellij version | status | notes |
+| --- | --- | --- |
+| `0.44.0+` | recommended | `pi-zellij` can show created pane/tab IDs in success notifications, and `/zt` can launch its initial command directly via `zellij action new-tab -- <command>` |
+| older versions | supported with fallback | commands still work, but zellij may not expose created IDs and `/zt` may fall back to the older typed-input startup path |
+
 ## Feature overview
 
 ### Pane and tab workflows
