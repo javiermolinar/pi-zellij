@@ -7,6 +7,8 @@ import { isInsideZellijSession, resetCurrentPaneColor, setCurrentPaneColor } fro
 const DEFAULT_DONE_BG = "#17352a";
 const GLOBAL_SETTINGS_PATH = join(homedir(), ".pi", "agent", "settings.json");
 const SETTINGS_SECTION_NAMES = ["pi-zellij", "pi-zv"] as const;
+const FOCUS_POLL_INTERVAL_MS = 400;
+const FOCUS_QUERY_TIMEOUT_MS = 2000;
 
 interface PaneHighlightConfigInput {
 	enabled?: boolean;
@@ -23,6 +25,14 @@ interface PaneHighlightConfig {
 	workingBg?: string;
 	workingFg?: string;
 }
+
+interface MessageLike {
+	role?: unknown;
+	stopReason?: unknown;
+	content?: unknown;
+}
+
+type JsonRecord = Record<string, unknown>;
 
 function readJsonFile(path: string): Record<string, unknown> | undefined {
 	if (!existsSync(path)) {
@@ -117,9 +127,129 @@ function hasWorkingColors(config: PaneHighlightConfig): boolean {
 	return Boolean(config.workingBg || config.workingFg);
 }
 
+function isRecord(value: unknown): value is JsonRecord {
+	return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function normalizePaneId(value: unknown): string | undefined {
+	if (typeof value === "number" && Number.isInteger(value) && value >= 0) {
+		return `terminal_${value}`;
+	}
+	if (typeof value !== "string") {
+		return undefined;
+	}
+
+	const trimmed = value.trim();
+	if (!trimmed) {
+		return undefined;
+	}
+	if (/^(?:terminal|plugin)_\d+$/.test(trimmed)) {
+		return trimmed;
+	}
+	if (/^\d+$/.test(trimmed)) {
+		return `terminal_${trimmed}`;
+	}
+	return undefined;
+}
+
+function readBoolean(value: unknown): boolean | undefined {
+	if (typeof value === "boolean") {
+		return value;
+	}
+	if (typeof value === "string") {
+		if (value === "true") return true;
+		if (value === "false") return false;
+	}
+	return undefined;
+}
+
+function getPaneEntries(parsed: unknown): JsonRecord[] {
+	if (Array.isArray(parsed)) {
+		return parsed.filter(isRecord);
+	}
+	if (!isRecord(parsed)) {
+		return [];
+	}
+
+	for (const key of ["panes", "items", "data", "results"]) {
+		const candidate = parsed[key];
+		if (Array.isArray(candidate)) {
+			return candidate.filter(isRecord);
+		}
+	}
+
+	return [parsed];
+}
+
+function getPaneIdFromEntry(entry: JsonRecord): string | undefined {
+	for (const key of ["pane_id", "paneId", "id", "terminal_id", "terminalId"]) {
+		const normalized = normalizePaneId(entry[key]);
+		if (normalized) {
+			return normalized;
+		}
+	}
+
+	const nestedPane = entry.pane;
+	if (isRecord(nestedPane)) {
+		return getPaneIdFromEntry(nestedPane);
+	}
+
+	return undefined;
+}
+
+function getFocusedStateFromEntry(entry: JsonRecord): boolean | undefined {
+	for (const key of ["is_focused", "focused", "isFocused", "active", "is_active", "isActive"]) {
+		const normalized = readBoolean(entry[key]);
+		if (normalized !== undefined) {
+			return normalized;
+		}
+	}
+
+	const nestedState = entry.state;
+	if (isRecord(nestedState)) {
+		return getFocusedStateFromEntry(nestedState);
+	}
+
+	const nestedPane = entry.pane;
+	if (isRecord(nestedPane)) {
+		return getFocusedStateFromEntry(nestedPane);
+	}
+
+	return undefined;
+}
+
+function hasVisibleAssistantContent(message: MessageLike): boolean {
+	if (typeof message.content === "string") {
+		return message.content.trim().length > 0;
+	}
+	if (!Array.isArray(message.content)) {
+		return false;
+	}
+	return message.content.length > 0;
+}
+
+function shouldHighlightAfterAgentEnd(messages: readonly unknown[]): boolean {
+	const assistantMessages = messages.filter((message): message is MessageLike => {
+		return isRecord(message) && message.role === "assistant";
+	});
+	if (assistantMessages.length === 0) {
+		return false;
+	}
+
+	const lastAssistantMessage = assistantMessages[assistantMessages.length - 1]!;
+	if (lastAssistantMessage.stopReason === "aborted") {
+		return false;
+	}
+	return hasVisibleAssistantContent(lastAssistantMessage);
+}
+
 export default function zvHighlightExtension(pi: ExtensionAPI) {
 	let config = loadPaneHighlightConfig(process.cwd());
 	let lastActionError: string | undefined;
+	let focusPollTimer: ReturnType<typeof setInterval> | undefined;
+	let focusPollInFlight = false;
+	let shouldClearOnRefocus = false;
+	let sawPaneBlurSinceDone = false;
 
 	function warnActionError(message: string): void {
 		if (lastActionError === message) {
@@ -133,13 +263,68 @@ export default function zvHighlightExtension(pi: ExtensionAPI) {
 		lastActionError = undefined;
 	}
 
+	function stopFocusPolling(): void {
+		if (focusPollTimer) {
+			clearInterval(focusPollTimer);
+			focusPollTimer = undefined;
+		}
+		focusPollInFlight = false;
+		shouldClearOnRefocus = false;
+		sawPaneBlurSinceDone = false;
+	}
+
+	async function getCurrentPaneFocusedState(): Promise<boolean | undefined> {
+		if (!isInsideZellijSession()) {
+			return undefined;
+		}
+
+		const currentPaneId = normalizePaneId(process.env.ZELLIJ_PANE_ID);
+		if (!currentPaneId) {
+			return undefined;
+		}
+
+		const result = await pi.exec("zellij", ["action", "list-panes", "--json", "--state"], {
+			timeout: FOCUS_QUERY_TIMEOUT_MS,
+		});
+		if (result.killed) {
+			warnActionError("pane focus query failed: zellij command timed out");
+			return undefined;
+		}
+		if (result.code !== 0) {
+			warnActionError(`pane focus query failed: ${result.stderr.trim() || result.stdout.trim() || `zellij exited with code ${result.code}`}`);
+			return undefined;
+		}
+
+		try {
+			const parsed = JSON.parse(result.stdout) as unknown;
+			for (const entry of getPaneEntries(parsed)) {
+				if (getPaneIdFromEntry(entry) !== currentPaneId) {
+					continue;
+				}
+				const focused = getFocusedStateFromEntry(entry);
+				if (focused !== undefined) {
+					clearActionError();
+					return focused;
+				}
+			}
+			warnActionError("pane focus query failed: could not determine current pane focus state");
+			return undefined;
+		} catch (error) {
+			const message = error instanceof Error ? error.message : String(error);
+			warnActionError(`pane focus query failed: ${message}`);
+			return undefined;
+		}
+	}
+
 	async function refreshConfig(cwd: string): Promise<void> {
 		const wasEnabled = config.enabled;
 		config = loadPaneHighlightConfig(cwd);
 		if ((!wasEnabled && !config.enabled) || !isInsideZellijSession()) {
+			stopFocusPolling();
 			return;
 		}
 
+		stopFocusPolling();
 		const result = await resetCurrentPaneColor(pi);
 		if (!result.ok) {
 			warnActionError(`pane highlight reset failed: ${result.error}`);
@@ -149,6 +334,7 @@ export default function zvHighlightExtension(pi: ExtensionAPI) {
 	}
 
 	async function resetPaneIfEnabled(): Promise<void> {
+		stopFocusPolling();
 		if (!config.enabled || !isInsideZellijSession()) {
 			return;
 		}
@@ -162,6 +348,7 @@ export default function zvHighlightExtension(pi: ExtensionAPI) {
 	}
 
 	async function applyWorkingState(): Promise<void> {
+		stopFocusPolling();
 		if (!config.enabled || !isInsideZellijSession()) {
 			return;
 		}
@@ -181,8 +368,52 @@ export default function zvHighlightExtension(pi: ExtensionAPI) {
 		clearActionError();
 	}
 
-	async function applyDoneState(): Promise<void> {
+	async function pollFocusForReset(): Promise<void> {
+		if (!shouldClearOnRefocus || focusPollInFlight) {
+			return;
+		}
+
+		focusPollInFlight = true;
+		try {
+			const focused = await getCurrentPaneFocusedState();
+			if (focused === undefined) {
+				return;
+			}
+			if (!sawPaneBlurSinceDone) {
+				if (!focused) {
+					sawPaneBlurSinceDone = true;
+				}
+				return;
+			}
+			if (!focused) {
+				return;
+			}
+			await resetPaneIfEnabled();
+		} finally {
+			focusPollInFlight = false;
+		}
+	}
+
+	async function armFocusBasedReset(): Promise<void> {
+		stopFocusPolling();
+		if (!config.enabled || !isInsideZellijSession() || !process.env.ZELLIJ_PANE_ID) {
+			return;
+		}
+
+		shouldClearOnRefocus = true;
+		const focused = await getCurrentPaneFocusedState();
+		sawPaneBlurSinceDone = focused === false;
+		focusPollTimer = setInterval(() => {
+			void pollFocusForReset();
+		}, FOCUS_POLL_INTERVAL_MS);
+	}
+
+	async function applyDoneState(messages: readonly unknown[]): Promise<void> {
 		if (!config.enabled || !isInsideZellijSession()) {
+			return;
+		}
+		if (!shouldHighlightAfterAgentEnd(messages)) {
+			await resetPaneIfEnabled();
 			return;
 		}
 
@@ -195,6 +426,7 @@ export default function zvHighlightExtension(pi: ExtensionAPI) {
 			return;
 		}
 		clearActionError();
+		await armFocusBasedReset();
 	}
 
 	pi.on("session_start", async (_event, ctx) => {
@@ -222,8 +454,8 @@ export default function zvHighlightExtension(pi: ExtensionAPI) {
 		await applyWorkingState();
 	});
 
-	pi.on("agent_end", async () => {
-		await applyDoneState();
+	pi.on("agent_end", async (event) => {
+		await applyDoneState(event.messages);
 	});
 
 	pi.on("session_shutdown", async () => {
