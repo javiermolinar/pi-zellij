@@ -239,11 +239,11 @@ Supported keys:
 - `enabled`
   - set to `false` to disable the feature
 - `doneBg`, `doneFg`
-  - pane colors to apply after `agent_end`
+  - pane colors to apply after `agent_end` when the pane is not currently focused
 - `workingBg`, `workingFg`
   - optional pane colors to apply while Pi is working; if omitted, `pi-zellij` resets the pane to its default colors when the next input is submitted or when the pane is focused again after being elsewhere
 
-When enabled, `pi-zellij` resets the pane color on session start, session switch, the next submitted input, pane refocus after blur, and session shutdown so completed-turn highlights do not linger across sessions. Aborted runs do not apply the done-state tint. After changing these settings, run `/reload` in Pi.
+When enabled, `pi-zellij` resets the pane color on session start, session switch, the next submitted input, pane refocus when zellij focus state is available, and session shutdown so completed-turn highlights do not linger across sessions. If the pane is already focused when a turn completes, the done-state tint is skipped so the Pi editor does not stay tinted while you type. Aborted runs do not apply the done-state tint. After changing these settings, run `/reload` in Pi.
 
 ### Zoxide jump commands
 

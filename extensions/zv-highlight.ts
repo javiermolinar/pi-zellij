@@ -7,8 +7,9 @@ import { isInsideZellijSession, resetCurrentPaneColor, setCurrentPaneColor } fro
 const DEFAULT_DONE_BG = "#17352a";
 const GLOBAL_SETTINGS_PATH = join(homedir(), ".pi", "agent", "settings.json");
 const SETTINGS_SECTION_NAMES = ["pi-zellij", "pi-zv"] as const;
-const FOCUS_POLL_INTERVAL_MS = 400;
+const FOCUS_POLL_INTERVAL_MS = 1000;
 const FOCUS_QUERY_TIMEOUT_MS = 2000;
+const MAX_FOCUS_QUERY_FAILURES = 3;
 
 interface PaneHighlightConfigInput {
 	enabled?: boolean;
@@ -163,6 +164,16 @@ function readBoolean(value: unknown): boolean | undefined {
 	return undefined;
 }
 
+function normalizeTabId(value: unknown): number | undefined {
+	if (typeof value === "number" && Number.isInteger(value) && value >= 0) {
+		return value;
+	}
+	if (typeof value === "string" && /^\d+$/.test(value.trim())) {
+		return Number(value.trim());
+	}
+	return undefined;
+}
+
 function getPaneEntries(parsed: unknown): JsonRecord[] {
 	if (Array.isArray(parsed)) {
 		return parsed.filter(isRecord);
@@ -192,6 +203,27 @@ function getPaneIdFromEntry(entry: JsonRecord): string | undefined {
 	const nestedPane = entry.pane;
 	if (isRecord(nestedPane)) {
 		return getPaneIdFromEntry(nestedPane);
+	}
+
+	return undefined;
+}
+
+function getTabIdFromEntry(entry: JsonRecord): number | undefined {
+	for (const key of ["tab_id", "tabId"]) {
+		const normalized = normalizeTabId(entry[key]);
+		if (normalized !== undefined) {
+			return normalized;
+		}
+	}
+
+	const nestedTab = entry.tab;
+	if (isRecord(nestedTab)) {
+		return getTabIdFromEntry(nestedTab);
+	}
+
+	const nestedPane = entry.pane;
+	if (isRecord(nestedPane)) {
+		return getTabIdFromEntry(nestedPane);
 	}
 
 	return undefined;
@@ -250,6 +282,7 @@ export default function zvHighlightExtension(pi: ExtensionAPI) {
 	let focusPollInFlight = false;
 	let shouldClearOnRefocus = false;
 	let sawPaneBlurSinceDone = false;
+	let consecutiveFocusQueryFailures = 0;
 
 	function warnActionError(message: string): void {
 		if (lastActionError === message) {
@@ -271,6 +304,19 @@ export default function zvHighlightExtension(pi: ExtensionAPI) {
 		focusPollInFlight = false;
 		shouldClearOnRefocus = false;
 		sawPaneBlurSinceDone = false;
+		consecutiveFocusQueryFailures = 0;
+	}
+
+	async function getActiveTabId(): Promise<number | undefined> {
+		const result = await pi.exec("zellij", ["action", "current-tab-info"], {
+			timeout: FOCUS_QUERY_TIMEOUT_MS,
+		});
+		if (result.killed || result.code !== 0) {
+			return undefined;
+		}
+
+		const match = /^\s*id:\s*(\d+)\s*$/m.exec(result.stdout);
+		return match ? Number(match[1]) : undefined;
 	}
 
 	async function getCurrentPaneFocusedState(): Promise<boolean | undefined> {
@@ -286,12 +332,7 @@ export default function zvHighlightExtension(pi: ExtensionAPI) {
 		const result = await pi.exec("zellij", ["action", "list-panes", "--json", "--state"], {
 			timeout: FOCUS_QUERY_TIMEOUT_MS,
 		});
-		if (result.killed) {
-			warnActionError("pane focus query failed: zellij command timed out");
-			return undefined;
-		}
-		if (result.code !== 0) {
-			warnActionError(`pane focus query failed: ${result.stderr.trim() || result.stdout.trim() || `zellij exited with code ${result.code}`}`);
+		if (result.killed || result.code !== 0) {
 			return undefined;
 		}
 
@@ -302,16 +343,24 @@ export default function zvHighlightExtension(pi: ExtensionAPI) {
 					continue;
 				}
 				const focused = getFocusedStateFromEntry(entry);
-				if (focused !== undefined) {
-					clearActionError();
-					return focused;
+				if (focused === undefined) {
+					return undefined;
 				}
+				if (!focused) {
+					clearActionError();
+					return false;
+				}
+
+				const paneTabId = getTabIdFromEntry(entry);
+				const activeTabId = await getActiveTabId();
+				clearActionError();
+				if (paneTabId === undefined || activeTabId === undefined) {
+					return true;
+				}
+				return paneTabId === activeTabId;
 			}
-			warnActionError("pane focus query failed: could not determine current pane focus state");
 			return undefined;
-		} catch (error) {
-			const message = error instanceof Error ? error.message : String(error);
-			warnActionError(`pane focus query failed: ${message}`);
+		} catch {
 			return undefined;
 		}
 	}
@@ -377,8 +426,13 @@ export default function zvHighlightExtension(pi: ExtensionAPI) {
 		try {
 			const focused = await getCurrentPaneFocusedState();
 			if (focused === undefined) {
+				consecutiveFocusQueryFailures += 1;
+				if (consecutiveFocusQueryFailures >= MAX_FOCUS_QUERY_FAILURES) {
+					stopFocusPolling();
+				}
 				return;
 			}
+			consecutiveFocusQueryFailures = 0;
 			if (!sawPaneBlurSinceDone) {
 				if (!focused) {
 					sawPaneBlurSinceDone = true;
@@ -394,15 +448,14 @@ export default function zvHighlightExtension(pi: ExtensionAPI) {
 		}
 	}
 
-	async function armFocusBasedReset(): Promise<void> {
+	function armFocusBasedReset(): void {
 		stopFocusPolling();
 		if (!config.enabled || !isInsideZellijSession() || !process.env.ZELLIJ_PANE_ID) {
 			return;
 		}
 
 		shouldClearOnRefocus = true;
-		const focused = await getCurrentPaneFocusedState();
-		sawPaneBlurSinceDone = focused === false;
+		sawPaneBlurSinceDone = true;
 		focusPollTimer = setInterval(() => {
 			void pollFocusForReset();
 		}, FOCUS_POLL_INTERVAL_MS);
@@ -417,6 +470,12 @@ export default function zvHighlightExtension(pi: ExtensionAPI) {
 			return;
 		}
 
+		const focused = await getCurrentPaneFocusedState();
+		if (focused !== false) {
+			await resetPaneIfEnabled();
+			return;
+		}
+
 		const result = await setCurrentPaneColor(pi, {
 			bg: config.doneBg,
 			fg: config.doneFg,
@@ -426,7 +485,7 @@ export default function zvHighlightExtension(pi: ExtensionAPI) {
 			return;
 		}
 		clearActionError();
-		await armFocusBasedReset();
+		armFocusBasedReset();
 	}
 
 	pi.on("session_start", async (_event, ctx) => {

@@ -20,6 +20,8 @@
 - When zellij reports created pane or tab IDs, `pi-zellij` now shows them in success notifications for split, floating, zoxide, review, continuation, and tab commands.
 - `/zt` now uses `zellij action new-tab -- <command>` when available instead of always simulating typed input, while keeping the previous typed-input path as a compatibility fallback.
 - Pane highlights now clear on the next submitted input or when the pane is focused again after being elsewhere, instead of waiting for the next agent start event. Aborted runs no longer apply the done-state tint.
+- Pane focus polling no longer writes transient zellij query timeout warnings into the Pi editor; refocus-based clearing is skipped if focus state cannot be queried reliably.
+- Done-state pane tint is now only applied while the Pi pane is unfocused, so the editor is reset immediately instead of staying green while typing in the active pane.
 
 ### Removed
 
