@@ -1,4 +1,4 @@
-import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
+import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import zvSplitExtension from "./zv-split.ts";
 import zvZoxideExtension from "./zv-zoxide.ts";
 import zvReviewExtension from "./zv-review.ts";
