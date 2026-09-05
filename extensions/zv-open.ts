@@ -1,4 +1,4 @@
-import type { ExtensionAPI, ExtensionCommandContext } from "@earendil-works/pi-coding-agent";
+import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
 import { existsSync, readFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
@@ -7,8 +7,10 @@ import {
 	formatPaneSuccessMessage,
 	openCommandInFloatingPane as openCommandInFloatingZellijPane,
 	openCommandInNewSplit,
+	openCommandInNewTab,
 	type PaneOpenResult,
 	type SplitDirection,
+	type TabOpenResult,
 } from "./zv-core.ts";
 
 const DEFAULT_FLOATING_PANE_OPTIONS = {
@@ -70,18 +72,59 @@ interface ConfiguredFloatingCommand {
 	description: string;
 }
 
+type TerminalPlacement = SplitDirection | "tab" | "floating";
+
+type OpenToolContext = Pick<ExtensionContext, "cwd">;
+
+interface ZellijOpenTerminalParams {
+	command: string;
+	placement?: TerminalPlacement;
+	title?: string;
+}
+
+interface OpenedTerminal {
+	ok: true;
+	placement: TerminalPlacement;
+	command: string;
+	paneId?: string;
+	tabId?: string;
+}
+
+const ZELLIJ_OPEN_TERMINAL_PARAMETERS = {
+	type: "object",
+	additionalProperties: false,
+	required: ["command"],
+	properties: {
+		command: {
+			type: "string",
+			description: "Interactive terminal command to run, for example k9s, htop, lazygit, or npm run dev",
+		},
+		placement: {
+			type: "string",
+			enum: ["right", "down", "tab", "floating"],
+			default: "tab",
+			description: "Where to open the command. Use floating for a 90% by 90% floating pane.",
+		},
+		title: {
+			type: "string",
+			description: "Optional zellij pane or tab name. Defaults to the command.",
+		},
+	},
+} as const;
+
 async function openToolInSplit(
 	pi: ExtensionAPI,
-	ctx: ExtensionCommandContext,
+	ctx: OpenToolContext,
 	direction: SplitDirection,
 	args: string,
+	name?: string,
 ): Promise<PaneOpenResult> {
-	return openCommandInNewSplit(pi, direction, buildShellCommand(ctx.cwd, args.trim()));
+	return openCommandInNewSplit(pi, direction, buildShellCommand(ctx.cwd, args.trim()), { name });
 }
 
 async function openToolInFloatingPane(
 	pi: ExtensionAPI,
-	ctx: ExtensionCommandContext,
+	ctx: OpenToolContext,
 	command: string,
 	name?: string,
 ): Promise<PaneOpenResult> {
@@ -89,6 +132,15 @@ async function openToolInFloatingPane(
 		name,
 		...DEFAULT_FLOATING_PANE_OPTIONS,
 	});
+}
+
+async function openToolInTab(
+	pi: ExtensionAPI,
+	ctx: OpenToolContext,
+	command: string,
+	name?: string,
+): Promise<TabOpenResult> {
+	return openCommandInNewTab(pi, ctx.cwd, buildShellCommand(ctx.cwd, command.trim()), { name });
 }
 
 function registerOpenCommand(
@@ -267,6 +319,91 @@ function registerConfiguredFloatingCommand(
 	});
 }
 
+function normalizeTerminalPlacement(value: unknown): TerminalPlacement {
+	return value === "right" || value === "down" || value === "tab" || value === "floating" ? value : "tab";
+}
+
+function getPlacementLabel(placement: TerminalPlacement): string {
+	if (placement === "right") {
+		return "right split";
+	}
+	if (placement === "down") {
+		return "lower split";
+	}
+	if (placement === "floating") {
+		return "floating pane";
+	}
+	return "tab";
+}
+
+async function openTerminalCommand(
+	pi: ExtensionAPI,
+	ctx: OpenToolContext,
+	params: ZellijOpenTerminalParams,
+): Promise<OpenedTerminal | { ok: false; error: string }> {
+	const command = typeof params.command === "string" ? params.command.trim() : "";
+	if (!command) {
+		return { ok: false, error: "Specify a command to open" };
+	}
+
+	const placement = normalizeTerminalPlacement(params.placement);
+	const title = params.title?.trim() || command;
+
+	if (placement === "tab") {
+		const result = await openToolInTab(pi, ctx, command, title);
+		if (!result.ok) {
+			return result;
+		}
+		return { ok: true, placement, command, tabId: result.tabId };
+	}
+
+	const result = placement === "floating"
+		? await openToolInFloatingPane(pi, ctx, command, title)
+		: await openToolInSplit(pi, ctx, placement, command, title);
+	if (!result.ok) {
+		return result;
+	}
+
+	return { ok: true, placement, command, paneId: result.paneId };
+}
+
+function registerAgentTerminalTool(pi: ExtensionAPI): void {
+	pi.registerTool({
+		name: "zellij_open_terminal",
+		label: "Open zellij terminal",
+		description:
+			"Open an interactive terminal command in zellij as a right split, lower split, new tab, or floating pane. Use for user-requested TUIs, logs, dev servers, watches, or long-running terminal views.",
+		promptSnippet:
+			"Open an interactive terminal command in zellij when the user asks for a tool or view in another pane, split, tab, or floating terminal.",
+		promptGuidelines: [
+			"Use zellij_open_terminal only when the user explicitly asks to open a command in zellij, another pane, split, tab, or floating terminal.",
+			"Use zellij_open_terminal with placement='tab' when the user says tab, placement='right' for a side pane, placement='down' for a below/lower pane, and placement='floating' for a floating pane.",
+			"Use zellij_open_terminal for interactive TUIs like k9s, lazygit, htop, hunk, log tails, dev servers, or watches; do not use bash for these unless the user wants captured output.",
+			"Do not open terminals proactively with zellij_open_terminal without a user request.",
+		],
+		parameters: ZELLIJ_OPEN_TERMINAL_PARAMETERS as any,
+		executionMode: "sequential",
+		async execute(_toolCallId, rawParams, _signal, _onUpdate, ctx) {
+			const params = rawParams as ZellijOpenTerminalParams;
+			const result = await openTerminalCommand(pi, ctx, params);
+			if (!result.ok) {
+				throw new Error(result.error);
+			}
+
+			return {
+				content: [{ type: "text", text: `Opened ${result.command} in a zellij ${getPlacementLabel(result.placement)}.` }],
+				details: {
+					command: result.command,
+					placement: result.placement,
+					cwd: ctx.cwd,
+					...(result.paneId ? { paneId: result.paneId } : {}),
+					...(result.tabId ? { tabId: result.tabId } : {}),
+				},
+			};
+		},
+	});
+}
+
 export default function zvOpenExtension(pi: ExtensionAPI) {
 	registerOpenCommand(
 		pi,
@@ -292,4 +429,6 @@ export default function zvOpenExtension(pi: ExtensionAPI) {
 		registerConfiguredFloatingCommand(pi, commandName, config);
 		registeredConfiguredNames.add(commandName);
 	}
+
+	registerAgentTerminalTool(pi);
 }

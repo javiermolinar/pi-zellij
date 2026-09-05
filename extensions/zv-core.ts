@@ -182,12 +182,17 @@ export async function openCommandInNewSplit(
 	pi: ExtensionAPI,
 	direction: SplitDirection,
 	command: string,
+	options?: { name?: string },
 ): Promise<PaneOpenResult> {
 	if (!isInsideZellijSession()) {
 		return { ok: false, error: "This command must be run from inside an active zellij session" };
 	}
 
-	const result = await execZellij(pi, ["run", "--direction", direction, "--", "sh", "-lc", command]);
+	const args = ["run", "--direction", direction];
+	if (options?.name) args.push("--name", options.name);
+	args.push("--", "sh", "-lc", command);
+
+	const result = await execZellij(pi, args);
 	if (!result.ok) {
 		return { ok: false, error: result.error || "Failed to open a new zellij pane" };
 	}

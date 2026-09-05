@@ -14,6 +14,7 @@
 - Added `zv-review` with `/zrv` and `/zrh`, plus bundled `code-review` skill and `/review` / `/review-diff` prompt templates for focused review workflows, including GitHub pull request review via `gh` when given a PR URL.
 - Added `zv-continue` with `/zcv` and `/zch` for split-based task handoff in the current checkout or by creating a git worktree branch with `-c <branch>`.
 - Added opt-in `paneHighlight` settings so Pi can tint the current zellij pane when an agent turn completes, with optional working-state colors.
+- Added an agent-facing `zellij_open_terminal` tool so Pi can open explicitly requested interactive terminal commands in right or lower splits, tabs, and floating panes.
 
 ### Changed
 

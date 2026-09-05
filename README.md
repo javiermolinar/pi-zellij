@@ -10,7 +10,7 @@ Pi package with [zellij](https://zellij.dev)-powered terminal integrations for [
 
 [Pi](https://pi.dev) works well in the terminal, but pane orchestration is better handled by a terminal multiplexer. `pi-zellij` adds zellij-native split workflows for Pi.
 
-It includes split and tab commands, generic tool launchers, settings-driven floating app shortcuts, opt-in pane highlighting for completed agent turns, zoxide jumps, review workflows, and split-based task handoff.
+It includes split and tab commands, generic tool launchers, an agent-facing terminal tool, settings-driven floating app shortcuts, opt-in pane highlighting for completed agent turns, zoxide jumps, review workflows, and split-based task handoff.
 
 ## Usage
 
@@ -131,6 +131,21 @@ Examples:
 ```
 
 Commands are executed via `sh -lc` in the current project directory.
+
+### Agent-opened terminals
+
+`pi-zellij` registers a `zellij_open_terminal` tool so Pi can open interactive terminal programs when explicitly asked.
+
+Example requests:
+
+```text
+open k9s in a new tab
+open lazygit in a right split
+open npm run dev below
+open htop in a floating pane
+```
+
+The tool supports `tab`, `right`, `down`, and `floating` placements and defaults to `tab`. Floating terminals use the same 90% by 90% pane size as configured floating commands. Use the tool for TUIs, log tails, dev servers, watches, and other terminal views that should remain interactive instead of being captured through the normal shell tool.
 
 ### Configured floating commands
 
