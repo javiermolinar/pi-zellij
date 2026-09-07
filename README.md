@@ -70,9 +70,7 @@ If pi is already running, use:
 - `/review <target>`, `/review-diff [focus-or-pr-url]`
   - expand bundled review prompts in the current pane
 - `/zrv`, `/zrh`, plus review flags
-  - open review-focused Pi sessions in a split
-- `/skill:code-review`
-  - loads the bundled structured review skill for files, directories, diffs, and PRs
+  - open review-focused Pi sessions in a split with built-in instructions or a configured skill
 
 ## Bundled extensions and resources
 
@@ -85,7 +83,6 @@ Extensions:
 - `zv-continue`
 
 Other bundled resources:
-- `code-review` skill
 - `/review` prompt template
 - `/review-diff` prompt template
 
@@ -317,7 +314,7 @@ Examples:
 
 ### Review helpers
 
-`pi-zellij` also bundles a reusable `code-review` skill plus prompt templates for in-place review:
+`pi-zellij` includes built-in review instructions; no skill installation is required and no review skill is registered globally. It also bundles prompt templates for in-place review:
 
 - `/review <target>`
   - prompt template for reviewing a file, directory, or GitHub pull request URL in the current pane
@@ -355,4 +352,27 @@ Examples:
 ```
 
 If the target is a GitHub pull request URL, the review workflow switches to PR review and instructs pi to inspect the pull request with `gh pr view` and `gh pr diff`.
+
+#### Use your own review skill
+
+By default, `/zrv` and `/zrh` inject the built-in review instructions into the new session's initial prompt only. To use an existing skill instead, set `pi-zellij.review.skill` in `~/.pi/agent/settings.json` or the trusted project's `.pi/settings.json`:
+
+```json
+{
+  "pi-zellij": {
+    "review": {
+      "skill": "my-code-review"
+    }
+  }
+}
+```
+
+Use the skill's name without the `/skill:` prefix. It must be loaded in the current Pi session. The commands expand its instructions before opening the pane, preserving its location for relative references and passing the review target and mode. The skill controls the workflow and output format; the request still tells Pi not to edit files unless asked.
+
+- Omit the setting to use the built-in instructions.
+- Project settings override global settings. Set `"skill": null` in the project to use the built-in instructions despite a global override.
+- An unavailable or unreadable skill, or invalid review settings, produces an error without opening a pane. There is no silent fallback.
+- Review settings are read on each invocation. After installing or enabling a skill, run `/reload` first.
+
+This setting only affects `/zrv` and `/zrh`; `/review` and `/review-diff` remain self-contained prompt templates.
 

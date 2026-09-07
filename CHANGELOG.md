@@ -4,6 +4,7 @@
 
 ### Added
 
+- Added optional `pi-zellij.review.skill` settings for `/zrv` and `/zrh` to use an existing loaded skill, with project overrides and errors for unavailable or unreadable skills.
 - Initial `pi-zellij` release with zellij-powered pane workflows for Pi.
 - Added `/zv`, `/zj`, and `/zt` to open a new zellij pane or tab and start a fresh Pi session in the same working directory.
 - Added `/zo` and `/zoh` to open a new pane and run any shell command there.
@@ -19,6 +20,7 @@
 
 ### Changed
 
+- `/zrv` and `/zrh` now use self-contained review instructions by default, injected only into the new review session. `/review` and `/review-diff` no longer refer to a bundled skill.
 - Explicit history inheritance now rejects branches with no conversation messages before creating a cloned session or opening a pane.
 - Expanded `zellij_open_terminal` prompt guidance so agents recognize requests to start another Pi session and prefer the dedicated `zellij_start_pi` interface when available.
 - Pi launch command construction now supports quoted provider, model, and thinking options and stops option parsing before initial prompts.
@@ -30,4 +32,5 @@
 
 ### Removed
 
+- Removed the bundled `code-review` skill from the package and installer so terminal workflows do not register a global review skill.
 - Removed the bundled `zv-notify` extension so `pi-zellij` does not conflict with separate notification packages or user-specific notification setups.
