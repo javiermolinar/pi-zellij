@@ -372,11 +372,12 @@ function registerAgentTerminalTool(pi: ExtensionAPI): void {
 		name: "zellij_open_terminal",
 		label: "Open zellij terminal",
 		description:
-			"Open an interactive terminal command in zellij as a right split, lower split, new tab, or floating pane. Use for user-requested TUIs, logs, dev servers, watches, or long-running terminal views.",
+			"Open an interactive terminal command in zellij as a right split, lower split, new tab, or floating pane. Use for user-requested Pi sessions, TUIs, logs, dev servers, watches, or long-running terminal views.",
 		promptSnippet:
-			"Open an interactive terminal command in zellij when the user asks for a tool or view in another pane, split, tab, or floating terminal.",
+			"Open an interactive terminal command or another Pi session in zellij when the user asks for it in another pane, split, tab, or floating terminal.",
 		promptGuidelines: [
 			"Use zellij_open_terminal only when the user explicitly asks to open a command in zellij, another pane, split, tab, or floating terminal.",
+			"Use zellij_open_terminal from pi-zellij when the user requests another Pi session in a split or tab, including an initial prompt. Prefer zellij_start_pi when it is available.",
 			"Use zellij_open_terminal with placement='tab' when the user says tab, placement='right' for a side pane, placement='down' for a below/lower pane, and placement='floating' for a floating pane.",
 			"Use zellij_open_terminal for interactive TUIs like k9s, lazygit, htop, hunk, log tails, dev servers, or watches; do not use bash for these unless the user wants captured output.",
 			"Do not open terminals proactively with zellij_open_terminal without a user request.",

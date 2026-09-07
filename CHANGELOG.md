@@ -15,9 +15,13 @@
 - Added `zv-continue` with `/zcv` and `/zch` for split-based task handoff in the current checkout or by creating a git worktree branch with `-c <branch>`.
 - Added opt-in `paneHighlight` settings so Pi can tint the current zellij pane when an agent turn completes, with optional working-state colors.
 - Added an agent-facing `zellij_open_terminal` tool so Pi can open explicitly requested interactive terminal commands in right or lower splits, tabs, and floating panes.
+- Added an agent-facing `zellij_start_pi` tool for fresh Pi sessions in right or lower splits and tabs, with optional initial prompts, model settings, pane titles, and explicit history inheritance through a separate cloned session.
 
 ### Changed
 
+- Explicit history inheritance now rejects branches with no conversation messages before creating a cloned session or opening a pane.
+- Expanded `zellij_open_terminal` prompt guidance so agents recognize requests to start another Pi session and prefer the dedicated `zellij_start_pi` interface when available.
+- Pi launch command construction now supports quoted provider, model, and thinking options and stops option parsing before initial prompts.
 - When zellij reports created pane or tab IDs, `pi-zellij` now shows them in success notifications for split, floating, zoxide, review, continuation, and tab commands.
 - `/zt` now uses `zellij action new-tab -- <command>` when available instead of always simulating typed input, while keeping the previous typed-input path as a compatibility fallback.
 - Pane highlights now clear on the next submitted input or when the pane is focused again after being elsewhere, instead of waiting for the next agent start event. Aborted runs no longer apply the done-state tint.

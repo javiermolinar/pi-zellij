@@ -3,8 +3,17 @@ import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 const ZELLIJ_TIMEOUT_MS = 5000;
 
 export type SplitDirection = "right" | "down";
+export type PiThinkingLevel = "off" | "minimal" | "low" | "medium" | "high" | "xhigh" | "max";
 export type PaneOpenResult = { ok: true; paneId?: string } | { ok: false; error: string };
 export type TabOpenResult = { ok: true; tabId?: string } | { ok: false; error: string };
+
+export interface PiCommandOptions {
+	sessionFile?: string;
+	prompt?: string;
+	provider?: string;
+	model?: string;
+	thinking?: PiThinkingLevel;
+}
 
 interface ZellijExecResult {
 	ok: boolean;
@@ -60,14 +69,23 @@ export function shellEscape(value: string): string {
 	return `'${value.replace(/'/g, `'\\''`)}'`;
 }
 
-export function buildPiCommand(cwd: string, options?: { sessionFile?: string; prompt?: string }): string {
+export function buildPiCommand(cwd: string, options?: PiCommandOptions): string {
 	const commandParts = ["cd", shellEscape(cwd), "&&", "exec", "pi"];
 	if (options?.sessionFile) {
 		commandParts.push("--session", shellEscape(options.sessionFile));
 	}
+	if (options?.provider) {
+		commandParts.push("--provider", shellEscape(options.provider));
+	}
+	if (options?.model) {
+		commandParts.push("--model", shellEscape(options.model));
+	}
+	if (options?.thinking) {
+		commandParts.push("--thinking", shellEscape(options.thinking));
+	}
 	const prompt = options?.prompt?.trim();
 	if (prompt) {
-		commandParts.push(shellEscape(prompt));
+		commandParts.push("--", shellEscape(prompt));
 	}
 	return commandParts.join(" ");
 }
