@@ -20,6 +20,7 @@
 
 ### Changed
 
+- Disabled extension registration outside a zellij session, so commands, agent tools, and event hooks are only registered inside zellij. Bundled review prompt templates remain available everywhere.
 - `/zrv` and `/zrh` now use self-contained review instructions by default, injected only into the new review session. `/review` and `/review-diff` no longer refer to a bundled skill.
 - Explicit history inheritance now rejects branches with no conversation messages before creating a cloned session or opening a pane.
 - Expanded `zellij_open_terminal` prompt guidance so agents recognize requests to start another Pi session and prefer the dedicated `zellij_start_pi` interface when available.

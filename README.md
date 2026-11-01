@@ -38,6 +38,8 @@ If pi is already running, use:
 - pane, tab, and floating commands must be run from inside an active zellij session
 - `zoxide` is required for the zoxide commands
 
+Outside a zellij session, the extension is disabled: no commands, agent tools, or event hooks are registered. The bundled `/review` and `/review-diff` prompt templates remain available.
+
 ### Recommended zellij version
 
 | zellij version | status | notes |
